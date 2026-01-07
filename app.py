@@ -1,41 +1,35 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <style>
-        /* ضع هنا تنسيقات الـ CSS السابقة (الخلفية الداكنة، الرصيد، الأيقونات) */
-    </style>
-</head>
-<body>
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+import requests
 
-    <div class="dashboard">
-        </div>
+app = Flask(__name__)
+CORS(app)  # للسماح للموقع (Frontend) بمخاطبة السيرفر (Backend)
 
-    <script>
-        // وظيفة الإرسال المعدلة لتتصل بالسيرفر الخاص بك
-        async function sendOrderToBot() {
-            const orderData = {
-                type: "طلب رشق",
-                details: {
-                    "المنصة": document.getElementById('platform').value,
-                    "الخدمة": document.getElementById('serviceType').value,
-                    "الرابط": document.getElementById('targetLink').value,
-                    "الكمية": document.getElementById('quantity').value,
-                    "السعر": document.getElementById('totalPrice').innerText + "$"
-                }
-            };
+# بيانات البوت الخاصة بك
+BOT_TOKEN = "7465926974:AAHzPv067I1ser4kExbRt5Hzj9R3Ma5Xjik"
+CHAT_ID = "6695916631"
 
-            try {
-                const response = await fetch('http://localhost:3000/api/send-order', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(orderData)
-                });
-                
-                if (response.ok) alert("تم إرسال الطلب للسيرفر بنجاح!");
-            } catch (error) {
-                alert("خطأ في الاتصال بالسيرفر");
-            }
-        }
-    </script>
-</body>
-</html>
+@app.route('/send_order', methods=['POST'])
+def send_order():
+    data = request.json
+    order_type = data.get('type')
+    details = data.get('details')
+
+    # تنسيق الرسالة التي ستصلك في التلغرام
+    message = f"🚨 {order_type} جديد:\n\n"
+    for key, value in details.items():
+        message += f"🔹 {key}: {value}\n"
+
+    # إرسال الرسالة عبر API التلغرام
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+    payload = {"chat_id": CHAT_ID, "text": message}
+    
+    response = requests.post(url, json=payload)
+    
+    if response.status_code == 200:
+        return jsonify({"status": "success", "message": "تم الإرسال للبوت بنجاح"}), 200
+    else:
+        return jsonify({"status": "error", "message": "فشل في الإرسال"}), 500
+
+if __name__ == '__main__':
+    app.run(port=5000, debug=True)
